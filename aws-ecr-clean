@@ -16,14 +16,13 @@ repo_name=$1
 image_keep_count=${2:-50}
 
 # Get list of images, assuming sortable by tag (i.e. a date prefix), so we sort
-# and output all *but* last 50, that is, of only 40, nothing gets output.  The
+# and output all *but* last 50, that is, if only 40, nothing gets output.  The
 # latest tag sorts to the end, so safe from deletion because we +1 the
-# keep_count. Pushing also creates an image without a tag, which sort to the
-# front, so we delete all of those as well
+# keep_count. We ignore images without a tag as they could be dependent layers (?)
 keep_idx=$(($image_keep_count + 1))
 old_images=$(
   aws ecr list-images --repository-name "${repo_name}" | \
-    jq -r ".imageIds | sort_by(.imageTag) | map(\"imageDigest=\" + .imageDigest)[0:-$keep_idx] | join(\" \")"
+    jq -r "[.imageIds[] | select(.imageTag != null)] | sort_by(.imageTag) | map(\"imageDigest=\" + .imageDigest)[0:-$keep_idx] | join(\" \")"
 )
 
 if [[ -n $old_images ]]; then
